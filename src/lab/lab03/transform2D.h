@@ -52,9 +52,8 @@ namespace transform2D
         const LogicSpace& logic_space,
         const ViewportSpace& viewport_space)
     {
-        // TODO(student): Ex. 1
-        //
-        // You can use the translation and scaling transformations
+        // TODO(student): Ex. 1 - You can use the translation and scaling transformations
+
         return glm::mat3(1);
     }
 

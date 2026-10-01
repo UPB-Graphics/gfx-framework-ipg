@@ -7,25 +7,48 @@
 #include "utils/glm_utils.h"
 
 
+/*
+ *  Framebuffer object with textures attached to it. The textures are
+ *  created elsewhere (see `Texture2D::Create`) and are not owned by
+ *  the framebuffer.
+ */
 class FrameBuffer
 {
  public:
     FrameBuffer();
     ~FrameBuffer();
-    void Clean();
-    void Generate(int width, int height, int nrTextures, bool hasDepthTexture = true, int precision = 32);
-    void Resize(int width, int height, int precision = 32);
 
+    FrameBuffer(const FrameBuffer &) = delete;
+    FrameBuffer &operator=(const FrameBuffer &) = delete;
+
+    // Attaches `texture` as color attachment `index` and enables it as a
+    // draw buffer. Pass nullptr to detach.
+    void AttachTexture(unsigned int index, Texture2D *texture);
+    void AttachDepthTexture(Texture2D *texture);
+
+    bool IsComplete() const;
+
+    // Binds the framebuffer and sets the viewport to its resolution
     void Bind(bool clearBuffer = true) const;
-    void BindTexture(int textureID, unsigned int TextureUnit) const;
+
+    // Clears a single color attachment, whatever its format
+    void ClearAttachment(unsigned int index, const glm::vec4 &value) const;
+
+    // Copies color attachment `index` to the default framebuffer,
+    // stretched to `destinationSize`
+    void BlitToDefault(const glm::ivec2 &destinationSize, unsigned int index = 0, GLenum filter = GL_NEAREST) const;
+
+    void BindTexture(unsigned int index, unsigned int TextureUnit) const;
     void BindAllTextures() const;
     void BindDepthTexture(unsigned int TextureUnit) const;
 
+    GLuint GetID() const;
     Texture2D* GetTexture(unsigned int index) const;
     Texture2D* GetDepthTexture() const;
     unsigned int GetTextureID(unsigned int index) const;
     unsigned int GetNumberOfRenderTargets() const;
 
+    // The resolution of the attachments
     glm::ivec2 GetResolution() const;
 
     void SendResolution(Shader *shader) const;
@@ -38,15 +61,13 @@ class FrameBuffer
     static void SetDefaultClearColor(glm::vec4 clearColor);
 
  private:
-    Texture2D *textures;
+    void UpdateDrawBuffers() const;
+
+ private:
+    GLuint FBO;
+    std::vector<Texture2D *> textures;
     Texture2D *depthTexture;
 
-    unsigned int FBO;
-    unsigned int *DrawBuffers;          // TODO(developer): test if is necessary to declare
-
-    int width;
-    int height;
-    unsigned int nrTextures;
     glm::vec4 clearColor;
     static glm::vec4 defaultClearColor;
 };

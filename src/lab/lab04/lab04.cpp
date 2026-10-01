@@ -1,233 +1,187 @@
 #include "lab/lab04/lab04.h"
 
+#include <algorithm>
 #include <vector>
-#include <iostream>
 
 #include "components/transform.h"
+
+// The scene of the lab. The interface (DrawUserInterface) is in editor/lab04_user_interface.cpp.
 
 using namespace std;
 using namespace lab;
 
-Lab04::Lab04()
+std::string Lab04::GetShaderPath() const
 {
-    window->SetSize(1280, 720);
-}
-
-Lab04::~Lab04()
-{
+    return PATH_JOIN(RESOURCE_PATH::SHADERS, "rasterizer", "Lab04.comp.glsl");
 }
 
 void Lab04::Initialize()
 {
-    GetCameraInput()->SetActive(true);
-
-    Camera *camera = GetSceneCamera();
-    camera->SetPositionAndRotation(glm::vec3(0, 1, 0), glm::quatLookAt(glm::vec3 (0, 0, -1), glm::vec3 (0, 1, 0)));
-    camera->Update();
-    camera_position = camera->m_transform->GetWorldPosition();
-    camera_forward = camera->m_transform->GetLocalOZVector();
-    camera_right = camera->m_transform->GetLocalOXVector();
-    camera_up = camera->m_transform->GetLocalOYVector();
-
-    cull_face_option = CULL_FACE_OPTION::NO_FACES;
-
-    viewport_space = { 0, 0, 1280, 720 };
-
-    image->Init(1280, 720, 3 /* channels */);
-    depthImage->Init(1280, 720);
-
-    DrawCube();
-}
-
-void Lab04::DrawCube()
-{
-    vector<VertexFormat> vertices
     {
-        VertexFormat(glm::vec3(-0.5, -0.5, 0.5), glm::vec3(1, 0, 0)),
-        VertexFormat(glm::vec3(0.5, -0.5, 0.5), glm::vec3(0, 1, 0)),
-        VertexFormat(glm::vec3(-0.5, 0.5, 0.5), glm::vec3(0, 0, 1)),
-        VertexFormat(glm::vec3(0.5, 0.5, 0.5), glm::vec3(0, 1, 1)),
-        VertexFormat(glm::vec3(-0.5, -0.5, -0.5), glm::vec3(1, 1, 0)),
-        VertexFormat(glm::vec3(0.5, -0.5, -0.5), glm::vec3(1, 0, 1)),
-        VertexFormat(glm::vec3(-0.5, 0.5, -0.5), glm::vec3(1, 1, 1)),
-        VertexFormat(glm::vec3(0.5, 0.5, -0.5), glm::vec3(0, 0, 0)),
-    };
+        GetCameraInput()->SetActive(true);
 
-    vector<unsigned int> indices
-    {
-        0, 1, 2,    // indices for first triangle
-        1, 3, 2,    // indices for second triangle
-        2, 3, 7,
-        2, 7, 6,
-        1, 7, 3,
-        1, 5, 7,
-        6, 7, 4,
-        7, 5, 4,
-        0, 4, 1,
-        1, 4, 5,
-        2, 6, 4,
-        0, 2, 4
-    };
-
-    {
-        glm::mat4 transformation = glm::mat3(1.0f);
-        transformation *= transform3D::Perspective(glm::radians(60.0f), 16.0f/9, 0.1f, 100.0f);
-        transformation *= transform3D::View(camera_position, camera_forward, camera_right, camera_up);
-        transformation *= ModelTransformation();
-
-        Rasterize(vertices, indices, transformation, viewport_space, cull_face_option);
+        gfxc::Camera *camera = GetSceneCamera();
+        camera->SetPositionAndRotation(glm::vec3(0, 1, 0), glm::quatLookAt(glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
+        camera->Update();
     }
+
+    {
+        vertices = {
+            { glm::vec3(-0.5, -0.5,  0.5), glm::vec3(1, 0, 0) },
+            { glm::vec3( 0.5, -0.5,  0.5), glm::vec3(0, 1, 0) },
+            { glm::vec3(-0.5,  0.5,  0.5), glm::vec3(0, 0, 1) },
+            { glm::vec3( 0.5,  0.5,  0.5), glm::vec3(0, 1, 1) },
+            { glm::vec3(-0.5, -0.5, -0.5), glm::vec3(1, 1, 0) },
+            { glm::vec3( 0.5, -0.5, -0.5), glm::vec3(1, 0, 1) },
+            { glm::vec3(-0.5,  0.5, -0.5), glm::vec3(1, 1, 1) },
+            { glm::vec3( 0.5,  0.5, -0.5), glm::vec3(0, 0, 0) },
+        };
+
+        triangles = {
+            { 0, 1, 2 }, { 1, 3, 2 },
+            { 2, 3, 7 }, { 2, 7, 6 },
+            { 1, 7, 3 }, { 1, 5, 7 },
+            { 6, 7, 4 }, { 7, 5, 4 },
+            { 0, 4, 1 }, { 1, 4, 5 },
+            { 2, 6, 4 }, { 0, 2, 4 },
+        };
+
+        CreateMesh("cube", vertices, triangles);
+    }
+
+    {
+        BuildTetrahedron();
+        CreateMesh("tetrahedron", tetrahedron_vertices, tetrahedron_triangles, TETRAHEDRON_MAX_VERTICES, TETRAHEDRON_MAX_TRIANGLES);
+    }
+
+    // Large enough for whichever mesh is shown
+    const auto maxVertices = static_cast<unsigned int>(std::max<size_t>(vertices.size(), TETRAHEDRON_MAX_VERTICES));
+    const auto maxTriangles = static_cast<unsigned int>(std::max<size_t>(triangles.size(), TETRAHEDRON_MAX_TRIANGLES));
+
+    CreateComputeShader("inspector", PATH_JOIN(RESOURCE_PATH::SHADERS, "rasterizer", "Lab04Inspect.comp.glsl"));
+    buffers["inspected_vertices"] = new TypedBuffer<InspectedVertex>(GL_SHADER_STORAGE_BUFFER, maxVertices);
+    buffers["inspected_faces"] = new TypedBuffer<int>(GL_SHADER_STORAGE_BUFFER, maxTriangles);
 }
 
-glm::mat4 Lab04::ModelTransformation()
+void Lab04::BuildTetrahedron()
+{
+    tetrahedron_vertices.clear();
+    tetrahedron_triangles.clear();
+
+    // TODO(student): BONUS - A tetrahedron, with the vertices of every triangle in counterclockwise
+    // order when seen from outside, and a different color for each vertex
+}
+
+std::string Lab04::ShownMesh() const
+{
+    return show_tetrahedron ? "tetrahedron" : "cube";
+}
+
+const std::vector<Vertex> &Lab04::ShownVertices() const
+{
+    return show_tetrahedron ? tetrahedron_vertices : vertices;
+}
+
+const std::vector<Triangle> &Lab04::ShownTriangles() const
+{
+    return show_tetrahedron ? tetrahedron_triangles : triangles;
+}
+
+glm::mat4 Lab04::ModelTransformation() const
 {
     glm::mat4 transformation = glm::mat4(1);
 
-    transformation *= transform3D::Translate(0, 1, -3);
-    transformation *= transform3D::RotateOZ(glm::radians(45.0f));
-    transformation *= transform3D::RotateOY(glm::radians(45.0f));
-    transformation *= transform3D::RotateOX(glm::radians(45.0f));
-    transformation *= transform3D::Scale(1.25f, 1.25f, 1.25f);
+    transformation *= transform3D::Translate(mesh_position.x, mesh_position.y, mesh_position.z);
+    transformation *= transform3D::RotateOZ(glm::radians(mesh_rotation.z));
+    transformation *= transform3D::RotateOY(glm::radians(mesh_rotation.y));
+    transformation *= transform3D::RotateOX(glm::radians(mesh_rotation.x));
+    transformation *= transform3D::Scale(mesh_scale.x, mesh_scale.y, mesh_scale.z);
 
     return transformation;
 }
 
-void Lab04::Rasterize(
-    const vector<VertexFormat> &vertices,
-    const vector<unsigned int> &indices,
-    const glm::mat4 &transformation,
-    const transform2D::ViewportSpace &viewport_space,
-    CULL_FACE_OPTION cull_face_option)
+Lab04::Matrices Lab04::ComputeMatrices() const
 {
-    if (cull_face_option == CULL_FACE_OPTION::BOTH_FACES) {
+    const gfxc::Transform *camera = GetSceneCamera()->m_transform;
+    const float aspect = static_cast<float>(targetSize.x) / static_cast<float>(targetSize.y);
+
+    Matrices matrices;
+    matrices.model = ModelTransformation();
+    matrices.view = transform3D::View(
+        camera->GetWorldPosition(),
+        camera->GetLocalOZVector(),
+        camera->GetLocalOXVector(),
+        camera->GetLocalOYVector());
+    matrices.projection = transform3D::Perspective(glm::radians(fov), aspect, z_near, z_far);
+    matrices.viewport = transform2D::Viewport(
+        transform2D::LogicSpace(-1, -1, 2, 2),
+        transform2D::ViewportSpace(0, 0, targetSize.x, targetSize.y));
+
+    return matrices;
+}
+
+void Lab04::SetMatrices(const Shader *shader, const Matrices &matrices) const
+{
+    shader->SetUniform("model", matrices.model);
+    shader->SetUniform("view", matrices.view);
+    shader->SetUniform("projection", matrices.projection);
+    shader->SetUniform("viewport", matrices.viewport);
+    shader->SetUniform("perspective_divide", perspective_divide ? 1 : 0);
+}
+
+void Lab04::Draw(float deltaTimeSeconds)
+{
+    if (spin) {
+        mesh_rotation.x = glm::mod(mesh_rotation.x + 20.f * deltaTimeSeconds + 180.f, 360.f) - 180.f;
+    }
+
+    const Matrices matrices = ComputeMatrices();
+
+    // Culling both faces leaves nothing to draw
+    if (cull_face_option != BOTH_FACES) {
+        const Shader *shader = GetRasterizer();
+        SetMatrices(shader, matrices);
+        shader->SetUniform("cull_face", cull_face_option);
+        shader->SetUniform("depth_test", depth_test ? 1 : 0);
+
+        RasterizeMesh(ShownMesh());
+    }
+
+    Inspect(matrices);
+}
+
+void Lab04::Inspect(const Matrices &matrices)
+{
+    const Shader *shader = shaders["inspector"];
+    if (!shader->GetProgramID()) {
         return;
     }
+    shader->Use();
 
-    for (int i = 0; i < indices.size(); i += 3) {
-        auto v1 = vertices[indices[i]];
-        auto v2 = vertices[indices[i+1]];
-        auto v3 = vertices[indices[i+2]];
+    const std::vector<Vertex> &vertices = ShownVertices();
+    const std::vector<Triangle> &triangles = ShownTriangles();
 
-        glm::vec3 clip_space_position1 = ComputeClipSpacePosition(v1.position, transformation);
-        glm::vec3 clip_space_position2 = ComputeClipSpacePosition(v2.position, transformation);
-        glm::vec3 clip_space_position3 = ComputeClipSpacePosition(v3.position, transformation);
+    SetMatrices(shader, matrices);
+    shader->SetUniform("vertex_count", static_cast<unsigned int>(vertices.size()));
+    shader->SetUniform("triangle_count", static_cast<unsigned int>(triangles.size()));
 
-        auto triangle_face = DetermineTriangleFace(clip_space_position1, clip_space_position2, clip_space_position3);
+    BindMesh(ShownMesh());
+    buffers["inspected_vertices"]->BindBase(4);
+    buffers["inspected_faces"]->BindBase(5);
 
-        if (triangle_face == cull_face_option) {
-            continue;
-        }
+    const auto count = static_cast<unsigned int>(std::max(vertices.size(), triangles.size()));
+    glDispatchCompute((count + 63) / 64, 1, 1);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-        v1.position = ComputeScreenSpacePosition(clip_space_position1, viewport_space);
-        v2.position = ComputeScreenSpacePosition(clip_space_position2, viewport_space);
-        v3.position = ComputeScreenSpacePosition(clip_space_position3, viewport_space);
-
-        TriangleRasterizer::Rasterize(
-            v1, v2, v3, image, depthImage
-        );
-    }
-}
-
-glm::vec3 Lab04::ComputeClipSpacePosition(
-    const glm::vec3 &position,
-    const glm::mat4 &transformation)
-{
-    glm::vec4 homogenous_coordinate = transformation * 
-        glm::vec4(position.x, position.y, position.z, 1);
-
-    // TODO(student): Ex. 3
-
-    glm::vec3 clip_space_pos = glm::vec3(homogenous_coordinate);
-
-    return clip_space_pos;
-}
-
-glm::vec3 Lab04::ComputeScreenSpacePosition(
-    const glm::vec3 &clip_space_position,
-    const transform2D::ViewportSpace &viewport_space)
-{
-    transform2D::LogicSpace logic_space = { -1, -1, 2, 2 };
-
-    glm::mat3 viewport_transformation =
-        transform2D::Viewport(logic_space, viewport_space);
-
-    glm::vec3 screen_space_position = viewport_transformation *
-        glm::vec3(clip_space_position.x, clip_space_position.y, 1);
-    screen_space_position.z = clip_space_position.z * 0.5 + 0.5;
-
-    return screen_space_position;
-}
-
-TRIANGLE_FACE Lab04::DetermineTriangleFace(
-    const glm::vec2 &v1,
-    const glm::vec2 &v2,
-    const glm::vec2 &v3)
-{
-    glm::vec3 v13D = glm::vec3(v1.x, v1.y, 0);
-    glm::vec3 v23D = glm::vec3(v2.x, v2.y, 0);
-    glm::vec3 v33D = glm::vec3(v3.x, v3.y, 0);
-
-    glm::vec3 cross_produt = glm::cross(v23D - v13D, v33D - v13D);
-
-    // TODO(student): Ex. 5
-    //
-    // Determine and return which face of the
-    // triangle is displayed. Use the sign of the z component
-    // of the cross product as follows:
-    // If the sign is positive, the front face of the triangle is displayed.
-    // If the sign is negative, the back face of the triangle is displayed.
-
-    return TRIANGLE_FACE::NONE;
-}
-
-void Lab04::OnInputUpdate(float deltaTime, int mods)
-{
-    // Treat continuous update based on input
-
-    bool need_refresh = false;
-
-    {
-        auto camera = GetSceneCamera();
-        auto cam_position = camera->m_transform->GetWorldPosition();
-        auto cam_forward = camera->m_transform->GetLocalOZVector();
-        auto cam_right = camera->m_transform->GetLocalOXVector();
-        auto cam_up = camera->m_transform->GetLocalOYVector();
-
-        if (cam_position != camera_position ||
-            cam_forward != camera_forward ||
-            cam_right != camera_right ||
-            cam_up != camera_up) {
-
-            camera_position = cam_position;
-            camera_forward = cam_forward;
-            camera_right = cam_right;
-            camera_up = cam_up;
-
-            need_refresh = true;
-        }
-    }
-
-    if (need_refresh) {
-        image->Clear(glm::vec3(0));
-        depthImage->Clear();
-
-        DrawCube();
-
-        image->UpdateInternalData();
-    }
+    inspected_vertices.resize(vertices.size());
+    inspected_faces.resize(triangles.size());
+    buffers["inspected_vertices"]->GetData(inspected_vertices.data(), inspected_vertices.size() * sizeof(InspectedVertex));
+    buffers["inspected_faces"]->GetData(inspected_faces.data(), inspected_faces.size() * sizeof(int));
 }
 
 void Lab04::OnKeyPress(int key, int mods)
 {
     if (key == GLFW_KEY_F) {
-        cull_face_option = (CULL_FACE_OPTION) 
-            ((cull_face_option + 1) % CULL_FACE_OPTION::COUNT);
-
-        image->Clear(glm::vec3(0));
-        depthImage->Clear();
-
-        DrawCube();
-
-        image->UpdateInternalData();
+        cull_face_option = static_cast<CULL_FACE_OPTION>((cull_face_option + 1) % CULL_FACE_OPTION::COUNT);
     }
 }

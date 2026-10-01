@@ -23,13 +23,14 @@ void Lab01::Initialize()
     Exercise4();
     Exercise5();
     Exercise6();
+    Bonus2();
 }
 
 void Lab01::Exercise1()
 {
     SetExercise();
 
-    //TODO(student): Ex. 1
+    // TODO(student): Ex. 1
     {
         SetPanel("1", { -3, -2, 100 }, { 0, 0, 1280, 720 });
 
@@ -45,7 +46,7 @@ void Lab01::Exercise2()
 {
     SetExercise();
 
-    //TODO(student): Ex. 2
+    // TODO(student): Ex. 2
     {
         SetPanel("2", { -7, -5, 75 }, { 0, 0, 1280, 720 });
 
@@ -87,7 +88,7 @@ void Lab01::Exercise3()
 {
     SetExercise();
 
-    //TODO(student): Ex. 3
+    // TODO(student): Ex. 3
     {
         SetPanel("3", { -7, -5, 75 }, { 0, 0, 1280, 720 });
 
@@ -109,7 +110,7 @@ void Lab01::Exercise4()
 {
     SetExercise ();
 
-    //TODO(student): Ex. 4
+    // TODO(student): Ex. 4
     {
         SetPanel("4", { -3, -2, 100 }, { 0, 0, 1280, 720 });
 
@@ -125,7 +126,7 @@ void Lab01::Exercise5()
 {
     SetExercise();
 
-    //TODO(student): Ex. 5
+    // TODO(student): Ex. 5
     {
         SetPanel("5", { -7, -5, 75 }, { 0, 0, 1280, 720 });
 
@@ -171,7 +172,7 @@ void Lab01::Exercise6()
 {
     SetExercise();
 
-    //TODO(student): Ex. 6
+    // TODO(student): Ex. 6
     {
         SetPanel("6", { -7, -5, 75 }, { 0, 0, 1280, 720 });
 
@@ -197,5 +198,22 @@ void Lab01::Exercise6()
         for (const glm::vec2 &check_point : check_points) {
             RenderPoint(check_point, glm::vec3(0), "?");
         }
+    }
+}
+
+void Lab01::Bonus2()
+{
+    SetExercise();
+
+    // TODO(student): BONUS 2 - Draw `steps` quarter circle arcs, starting from `start_point`
+    // with `start_radius`, with the radii following the Fibonacci sequence
+    {
+        SetPanel("7", { 0, 0, 72 }, { 0, 0, 1280, 720 });
+
+        const int steps = 20;
+        const glm::vec2 start_point(0, 0);      // the bottom-left corner of the window
+        const float start_radius = 720.0f / 72; // the height of the window
+
+        RenderPoint(start_point, glm::vec3(1, 0, 0), "P");
     }
 }

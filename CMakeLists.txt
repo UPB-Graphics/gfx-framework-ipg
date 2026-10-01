@@ -12,11 +12,11 @@ set(target_name GFXFramework)
 project(${target_name} C CXX)
 
 
-# Use C99 and C++11
+# Use C99 and C++20
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
@@ -106,9 +106,24 @@ file(GLOB_RECURSE GFXF_HEADERS_PRIVATE
 )
 
 
+# Dear ImGui is vendored as source (see deps/imgui/VERSION.txt)
+set(IMGUI_DIR ${GFXF_ROOT_DIR}/deps/imgui)
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+
 # Gather the include directories
 set(GFXF_INCLUDE_DIRS_PRIVATE
     ${GFXF_ROOT_DIR}/deps/api
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
     ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
@@ -118,7 +133,15 @@ custom_add_executable(${target_name}
     ${GFXF_SOURCES}
     ${GFXF_SOURCES_HIDDEN}
     ${GFXF_HEADERS_PRIVATE}
+    ${IMGUI_SOURCES}
 )
+
+# Third-party code: keep the project's warning level out of it
+if (MSVC)
+    set_source_files_properties(${IMGUI_SOURCES} PROPERTIES COMPILE_OPTIONS "/W0;/FS")
+else()
+    set_source_files_properties(${IMGUI_SOURCES} PROPERTIES COMPILE_OPTIONS -w)
+endif()
 
 
 # Detect architecture
@@ -245,7 +268,9 @@ target_compile_definitions(${target_name} PRIVATE ${GFXF_CXX_DEFS})
 # Add compile options (specific to this project)
 # Recommended reading: so@a/23995391/5922876
 if (MSVC)
-    set(GFXF_CXX_FLAGS  /W4 /WX-)
+    # /FS: the ImGui sources compile with different options, in a separate cl batch
+    # that writes the same PDB in parallel
+    set(GFXF_CXX_FLAGS  /W4 /WX- /FS)
     # TODO(developer): Maybe address these warnings, see discussion below.
     set(GFXF_CXX_FLAGS  ${GFXF_CXX_FLAGS} /wd4100 /wd4458 /wd4189)
 else()

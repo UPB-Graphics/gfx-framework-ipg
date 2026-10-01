@@ -10,6 +10,8 @@
 #include "core/gpu/mesh.h"
 #include "core/gpu/shader.h"
 #include "core/gpu/texture2D.h"
+#include "core/gpu/buffer.h"
+#include "core/gpu/frame_buffer.h"
 #include "core/managers/resource_path.h"
 #include "core/managers/texture_manager.h"
 
@@ -58,6 +60,9 @@ namespace gfxc
         protected:
         std::unordered_map<std::string, Mesh *> meshes;
         std::unordered_map<std::string, Shader *> shaders;
+        std::unordered_map<std::string, Texture2D *> textures;
+        std::unordered_map<std::string, Buffer *> buffers;
+        std::unordered_map<std::string, FrameBuffer *> frameBuffers;
 
         /*
          * The OpenGL implementation of `glLineWidth` on Apple devices

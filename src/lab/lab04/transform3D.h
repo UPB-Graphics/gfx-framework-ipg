@@ -55,7 +55,8 @@ namespace transform3D
         const glm::vec3& right,
         const glm::vec3& up)
     {
-        // TODO(student): Ex. 4
+        // TODO(student): Ex. 4 - `forward` is the camera's OZ axis, which points behind the camera
+
         return glm::mat4(1);
     }
 

@@ -225,7 +225,7 @@ void Lab07::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & model
     glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(projection));
 
     // Draw the object
-    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glBindVertexArray(mesh->GetBuffers()->GetVAO());
     glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
 }
 

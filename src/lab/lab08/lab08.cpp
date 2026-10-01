@@ -291,7 +291,7 @@ void Lab08::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelM
     }
 
     // Draw the object
-    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glBindVertexArray(mesh->GetBuffers()->GetVAO());
     glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
 }
 

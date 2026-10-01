@@ -70,6 +70,9 @@ class WindowObject
 
     void MakeCurrentContext() const;
 
+    // The underlying GLFW window, for libraries that need it (e.g. ImGui)
+    GLFWwindow *GetGLFWWindow() const;
+
     // Window Information
     void SetSize(int width, int height);
 
