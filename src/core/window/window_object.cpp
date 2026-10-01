@@ -50,11 +50,17 @@ WindowObject::WindowObject(WindowProperties properties)
     deltaFrameTime = 0;
     props.aspectRatio = float(props.resolution.x) / props.resolution.y;
 
-    // Set context version, meaning 3.3 core profile
+    // Set context version, meaning 4.3 core profile (needed for compute
+    // shaders), or 3.3 core profile on Apple, which supports at most 4.1
     glfwWindowHint(GLFW_VISIBLE, props.visible);
 
+#if defined(__APPLE__)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#else
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#endif
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #if defined(__APPLE__)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -396,6 +402,12 @@ void WindowObject::UpdateObservers()
 void WindowObject::MakeCurrentContext() const
 {
     glfwMakeContextCurrent(window->handle);
+}
+
+
+GLFWwindow *WindowObject::GetGLFWWindow() const
+{
+    return window->handle;
 }
 
 

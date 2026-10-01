@@ -307,7 +307,7 @@ void Lab09::RenderTextureScreen(Shader *shader, unsigned int textureID)
     glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
 
     // Draw the object
-    glBindVertexArray(meshes["quad"]->GetBuffers()->m_VAO);
+    glBindVertexArray(meshes["quad"]->GetBuffers()->GetVAO());
     glDrawElements(meshes["quad"]->GetDrawMode(), static_cast<int>(meshes["quad"]->indices.size()), GL_UNSIGNED_INT, 0);
 }
 

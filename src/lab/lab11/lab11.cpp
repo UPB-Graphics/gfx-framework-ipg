@@ -133,7 +133,7 @@ void Lab11::RenderMeshInstanced(Mesh* mesh, Shader* shader, const glm::mat4& mod
     // this lab, go to `FrameEnd()` and activate `DrawCoordinateSystem()`.
 
     // Draw the object instanced
-    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glBindVertexArray(mesh->GetBuffers()->GetVAO());
     glDrawElementsInstanced(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, (void*)0, instances);
 }
 

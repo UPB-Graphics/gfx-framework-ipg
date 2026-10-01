@@ -3,6 +3,9 @@
 #include "window/input_controller.h"
 
 
+class GUIScene;
+
+
 class World : public InputController
 {
  public:
@@ -29,4 +32,7 @@ class World : public InputController
     double deltaTime;
     bool paused;
     bool shouldClose;
+
+    // Set while running if this world is also a `GUIScene`
+    GUIScene *guiScene;
 };

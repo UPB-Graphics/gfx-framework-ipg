@@ -107,8 +107,7 @@ bool Mesh::InitFromBuffer(unsigned int VAO,
     M.nrIndices = nrIndices;
     meshEntries.push_back(M);
 
-    buffers->ReleaseMemory();
-    buffers->m_VAO = VAO;
+    buffers->SetExternalVAO(VAO);
 
     return true;
 }
@@ -121,8 +120,8 @@ bool Mesh::InitFromData(const std::vector<VertexFormat> &vertices,
     this->indices = indices;
 
     InitFromData();
-    *buffers = gpu_utils::UploadData(vertices, indices);
-    return buffers->m_VAO != 0;
+    gpu_utils::UploadData(*buffers, vertices, indices);
+    return buffers->GetVAO() != 0;
 }
 
 
@@ -135,8 +134,8 @@ bool Mesh::InitFromData(const std::vector<glm::vec3>& positions,
     this->indices = indices;
 
     InitFromData();
-    *buffers = gpu_utils::UploadData(positions, normals, indices);
-    return buffers->m_VAO != 0;
+    gpu_utils::UploadData(*buffers, positions, normals, indices);
+    return buffers->GetVAO() != 0;
 }
 
 
@@ -151,8 +150,8 @@ bool Mesh::InitFromData(const std::vector<glm::vec3>& positions,
     this->indices = indices;
 
     InitFromData();
-    *buffers = gpu_utils::UploadData(positions, normals, texCoords, indices);
-    return buffers->m_VAO != 0;
+    gpu_utils::UploadData(*buffers, positions, normals, texCoords, indices);
+    return buffers->GetVAO() != 0;
 }
 
 
@@ -193,8 +192,8 @@ bool Mesh::InitFromScene(const aiScene* pScene)
         return false;
 
     buffers->ReleaseMemory();
-    *buffers = gpu_utils::UploadData(positions, normals, texCoords, indices);
-    return buffers->m_VAO != 0;
+    gpu_utils::UploadData(*buffers, positions, normals, texCoords, indices);
+    return buffers->GetVAO() != 0;
 }
 
 
@@ -282,7 +281,7 @@ void Mesh::UseMaterials(bool value)
 
 void Mesh::Render() const
 {
-    glBindVertexArray(buffers->m_VAO);
+    glBindVertexArray(buffers->GetVAO());
     for (unsigned int i = 0; i < meshEntries.size(); i++)
     {
         if (useMaterial)

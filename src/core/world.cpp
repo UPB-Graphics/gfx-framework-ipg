@@ -1,6 +1,7 @@
 #include "core/world.h"
 
 #include "core/engine.h"
+#include "core/gui.h"
 #include "components/camera_input.h"
 #include "components/transform.h"
 
@@ -12,6 +13,7 @@ World::World()
     deltaTime = 0;
     paused = false;
     shouldClose = false;
+    guiScene = nullptr;
 
     window = Engine::GetWindow();
 }
@@ -22,10 +24,19 @@ void World::Run()
     if (!window)
         return;
 
+    // Only scenes that have a user interface pay for ImGui
+    guiScene = dynamic_cast<GUIScene *>(this);
+    if (guiScene)
+        gui::Init(window);
+
     while (!window->ShouldClose())
     {
         LoopUpdate();
     }
+
+    if (guiScene)
+        gui::Shutdown();
+    guiScene = nullptr;
 }
 
 
@@ -73,6 +84,14 @@ void World::LoopUpdate()
     FrameStart();
     Update(static_cast<float>(deltaTime));
     FrameEnd();
+
+    // The user interface is drawn last, over the scene
+    if (guiScene)
+    {
+        gui::BeginFrame();
+        guiScene->DrawUserInterface();
+        gui::EndFrame();
+    }
 
     // Swap front and back buffers - image will be displayed to the screen
     window->SwapBuffers();

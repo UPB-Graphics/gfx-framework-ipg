@@ -19,5 +19,6 @@ namespace lab
          void Exercise4();
          void Exercise5();
          void Exercise6();
+         void Bonus2();
     };
 }   // namespace lab

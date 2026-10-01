@@ -20,9 +20,15 @@ class Texture2D
     void Create(const unsigned char* img, int width, int height, int chn);
     void CreateU16(const unsigned int* img, int width, int height, int chn);
 
+    // Creates a texture with an explicit storage format, e.g.
+    //   Create(w, h, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE)
+    //   Create(w, h, GL_R32F, GL_RED, GL_FLOAT)
+    //   Create(w, h, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT)
+    // `format` and `type` describe `data`, which may be null for an empty texture.
+    // To render into it, attach it to a framebuffer with glFramebufferTexture2D.
+    void Create(unsigned int width, unsigned int height, GLint internalFormat, GLenum format, GLenum type, const void *data = nullptr);
+
     void CreateCubeTexture(const float *data, unsigned int width, unsigned int height, unsigned int chn);
-    void CreateFrameBufferTexture(unsigned int width, unsigned int height, unsigned int targetID, unsigned int precision = 32);
-    void CreateDepthBufferTexture(unsigned int width, unsigned int height);
 
     bool Load2D(const char* fileName, GLenum wrappingMode = GL_REPEAT);
     void SaveToFile(const char* fileName);
@@ -34,6 +40,7 @@ class Texture2D
     unsigned char *GetImageData() const;
 
     unsigned int GetNrChannels() const;
+    GLint GetInternalFormat() const;
 
     void SetWrappingMode(GLenum mode);
     void SetFiltering(GLenum minFilter, GLenum magFilter = GL_LINEAR);
@@ -46,10 +53,10 @@ class Texture2D
 
  protected:
     bool cacheInMemory;
-    unsigned int bitsPerPixel;
     unsigned int width;
     unsigned int height;
     unsigned int channels;
+    GLint internalFormat;
 
     GLuint targetType;
     GLuint textureID;

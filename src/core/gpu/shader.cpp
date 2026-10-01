@@ -2,6 +2,14 @@
 
 #include <fstream>
 #include <iostream>
+#include <cstdlib>
+#include <vector>
+
+#define STB_INCLUDE_IMPLEMENTATION
+#define STB_INCLUDE_LINE_GLSL
+#include "stb/stb_include.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 
 Shader::Shader(const std::string &name)
@@ -63,6 +71,60 @@ void Shader::BindTexturesUnits()
 GLint Shader::GetUniformLocation(const char *uniformName) const
 {
     return glGetUniformLocation(program, uniformName);
+}
+
+
+void Shader::SetUniform(const char *uniformName, int value) const
+{
+    glUniform1i(GetUniformLocation(uniformName), value);
+}
+
+
+void Shader::SetUniform(const char *uniformName, unsigned int value) const
+{
+    glUniform1ui(GetUniformLocation(uniformName), value);
+}
+
+
+void Shader::SetUniform(const char *uniformName, float value) const
+{
+    glUniform1f(GetUniformLocation(uniformName), value);
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::vec2 &value) const
+{
+    glUniform2fv(GetUniformLocation(uniformName), 1, glm::value_ptr(value));
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::vec3 &value) const
+{
+    glUniform3fv(GetUniformLocation(uniformName), 1, glm::value_ptr(value));
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::vec4 &value) const
+{
+    glUniform4fv(GetUniformLocation(uniformName), 1, glm::value_ptr(value));
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::ivec2 &value) const
+{
+    glUniform2iv(GetUniformLocation(uniformName), 1, glm::value_ptr(value));
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::mat3 &value) const
+{
+    glUniformMatrix3fv(GetUniformLocation(uniformName), 1, GL_FALSE, glm::value_ptr(value));
+}
+
+
+void Shader::SetUniform(const char *uniformName, const glm::mat4 &value) const
+{
+    glUniformMatrix4fv(GetUniformLocation(uniformName), 1, GL_FALSE, glm::value_ptr(value));
 }
 
 
@@ -135,7 +197,7 @@ unsigned int Shader::CreateAndLink()
 
     // Compile shaders
     for (auto S : shaderFiles) {
-        auto shaderID = Shader::CreateShader(S.file, S.type);
+        auto shaderID = Shader::CreateShader(S.file, S.type, includeDirectory);
         if (shaderID) {
             shaders.push_back(shaderID);
         } else {
@@ -171,6 +233,12 @@ unsigned int Shader::CreateAndLink()
 }
 
 
+void Shader::SetIncludeDirectory(const std::string &directory)
+{
+    includeDirectory = directory;
+}
+
+
 void Shader::ClearShaders()
 {
     shaderFiles.clear();
@@ -195,7 +263,35 @@ static std::string InjectDefines(const std::string &shaderCode)
 }
 
 
-unsigned int Shader::CreateShader(const std::string &shaderFile, GLenum shaderType)
+// Replaces every `#include "file"` line with the contents of that file (via
+// stb_include). Includes, nested ones too, are looked up in `includeDirectory`, or in the
+// directory of `shaderFile` if it is empty. The `#line` directives stb_include emits are
+// GLSL-style.
+static std::string ResolveIncludes(const std::string &shaderCode, const std::string &shaderFile, const std::string &includeDirectory)
+{
+    size_t dirPos = shaderFile.find_last_of("\\/");
+    std::string directory = !includeDirectory.empty() ? includeDirectory
+                          : (dirPos == std::string::npos) ? "." : shaderFile.substr(0, dirPos);
+
+    // stb_include takes mutable C strings
+    std::vector<char> code(shaderCode.c_str(), shaderCode.c_str() + shaderCode.size() + 1);
+    std::vector<char> path(directory.c_str(), directory.c_str() + directory.size() + 1);
+    std::vector<char> name(shaderFile.c_str(), shaderFile.c_str() + shaderFile.size() + 1);
+    char error[256] = {};
+
+    char *result = stb_include_string(code.data(), nullptr, path.data(), name.data(), error);
+    if (result == nullptr) {
+        std::cout << "\t" << error << std::endl;
+        std::terminate();
+    }
+
+    std::string resolved(result);
+    free(result);
+    return resolved;
+}
+
+
+unsigned int Shader::CreateShader(const std::string &shaderFile, GLenum shaderType, const std::string &includeDirectory)
 {
     std::string shader_code;
     std::ifstream file(shaderFile.c_str(), std::ios::in);
@@ -212,9 +308,11 @@ unsigned int Shader::CreateShader(const std::string &shaderFile, GLenum shaderTy
     shader_code.resize((unsigned int)file.tellg());
     file.seekg(0, std::ios::beg);
     file.read(&shader_code[0], shader_code.size());
+    // In text mode, CRLF line endings shrink the content read, so drop the unread tail
+    shader_code.resize((size_t)file.gcount());
     file.close();
 
-    return CompileShader(InjectDefines(shader_code), shaderType);
+    return CompileShader(InjectDefines(ResolveIncludes(shader_code, shaderFile, includeDirectory)), shaderType);
 }
 
 

@@ -18,6 +18,23 @@ SimpleScene::SimpleScene()
 
 SimpleScene::~SimpleScene()
 {
+    // The scene owns everything in its resource maps. Framebuffers go
+    // first, since they reference textures.
+    for (auto &frameBuffer : frameBuffers) {
+        delete frameBuffer.second;
+    }
+    for (auto &buffer : buffers) {
+        delete buffer.second;
+    }
+    for (auto &texture : textures) {
+        delete texture.second;
+    }
+    for (auto &shader : shaders) {
+        delete shader.second;
+    }
+    for (auto &mesh : meshes) {
+        delete mesh.second;
+    }
 }
 
 

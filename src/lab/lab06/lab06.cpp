@@ -253,7 +253,7 @@ void Lab06::RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 & model,
     // uniform type attribute to the shader
 
     // Draw the object
-    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glBindVertexArray(mesh->GetBuffers()->GetVAO());
     glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
 }
 

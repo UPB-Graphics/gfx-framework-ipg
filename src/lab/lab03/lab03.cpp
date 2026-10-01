@@ -2,212 +2,217 @@
 
 #include <vector>
 
+// The scene of the lab. The editor (DrawUserInterface) is in editor/lab03_user_interface.cpp.
+
 using namespace std;
 using namespace lab;
 
-Lab03::Lab03()
+std::string Lab03::GetShaderPath() const
 {
-    window->SetSize(1280, 720);
+    return PATH_JOIN(RESOURCE_PATH::SHADERS, "rasterizer", "Lab03.comp.glsl");
 }
 
-Lab03::~Lab03()
-{
+void Lab03::Initialize() {
+    {
+        vector<Vertex> vertices
+        {
+            { glm::vec3(0, 0, 0.5), glm::vec3(1, 0, 0) },
+            { glm::vec3(0, 1, 0.5), glm::vec3(0, 1, 0) },
+            { glm::vec3(1, 0, 0.5), glm::vec3(0, 0, 1) },
+            { glm::vec3(1, 1, 0.5), glm::vec3(0, 1, 1) },
+        };
+
+        vector<Triangle> triangles
+        {
+            { 0, 1, 2 },
+            { 1, 2, 3 },
+        };
+
+        CreateMesh("square", vertices, triangles);
+    }
+
+    BuildStarRay();
+    CreateMesh("star", star_vertices, star_triangles, STAR_MAX_VERTICES, STAR_MAX_TRIANGLES);
+
+    CreateViewports();
+    CreateTransforms();
 }
 
-void Lab03::Initialize()
+void Lab03::BuildStarRay()
 {
-    image->Init(1280, 720, 3 /* channels */);
-    depthImage->Init(1280, 720);
+    star_vertices.clear();
+    star_triangles.clear();
 
-    logic_space = { 0, 0, 16.0f, 9.0f };
-    viewport_space = { 0, 0, 1280, 720 };
-
-    // TODO(student): Ex. 4
-
-    DrawShapes();
+    // TODO(student): BONUS - The vertices and indices of one ray of the star, a triangle
 }
 
-void Lab03::DrawShapes()
+void Lab03::BuildStarTransforms(int rays)
 {
-    vector<VertexFormat> vertices
+    star_transforms.clear();
+
+    // TODO(student): BONUS - One transformation for each of the `rays` rays, placing
+    // the ray around the center of the star
+}
+
+void Lab03::AddViewport(const transform2D::ViewportSpace &viewport_space)
+{
+    viewports.push_back({ viewport_space, transform2D::Viewport(logic_space, viewport_space) });
+}
+
+void Lab03::CreateViewports()
+{
+    viewports.clear();
+
+    // TODO(student): Ex. 4 - Divide the screen into four quadrants, with a viewport in each
+
+    AddViewport(transform2D::ViewportSpace(0, 0, targetSize.x, targetSize.y));
+}
+
+void Lab03::CreateTransforms()
+{
+    transforms.clear();
+
     {
-        VertexFormat(glm::vec3(0, 0,  0.5), glm::vec3(1, 0, 0)),
-        VertexFormat(glm::vec3(0, 1,  0.5), glm::vec3(0, 1, 0)),
-        VertexFormat(glm::vec3(1, 0,  0.5), glm::vec3(0, 0, 1)),
-        VertexFormat(glm::vec3(1, 1,  0.5), glm::vec3(0, 1, 1)),
-    };
+        glm::mat3 transformation = transform2D::Translate(1, 6);
 
-    vector<unsigned int> indices
-    {
-        0, 1, 2,    // indices for first triangle
-        1, 2, 3,    // indices for second triangle
-    };
-
-    glm::mat3 viewPortTransformation = transform2D::Viewport(logic_space, viewport_space);
-
-    {
-        glm::mat3 transformation = glm::mat3(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(1, 6);
-
-        Rasterize(vertices, indices, transformation);
-    }
-
-    // TODO(student): Apply a uniform scaling transformation,
-    // which halves the scale of the square. Apply the
-    // transformation from the bottom-left corner of the square
-    {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(4, 6);
-
-        Rasterize(vertices, indices, transformation);
-    }
-
-    // TODO(student): Apply a uniform scaling transformation,
-    // which doubles the scale of the square. Apply the
-    // transformation from the bottom-left corner of the square
-    {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(7, 6);
-
-        Rasterize(vertices, indices, transformation);
-    }
-
-    // TODO(student): Apply a 45 degree rotation transformation
-    // to the lower-left corner of the square
-    {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(10, 6);
-
-        Rasterize(vertices, indices, transformation);
-    }
-
-    // TODO(student): Apply two transformations together, one
-    // of non-uniform scaling with the scaling vector (1, 2)
-    // and a rotation transformation of 45 degrees. Apply both
-    // transformations to the lower left corner of the square.
-    {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(13, 6);
-
-        Rasterize(vertices, indices, transformation);
+        transforms.push_back(transformation);
     }
 
     {
-        glm::mat3 transformation = glm::mat3(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(1, 2);
+        glm::mat3 transformation = transform2D::Translate(4, 6);
 
-        Rasterize(vertices, indices, transformation);
+        // TODO(student): Ex. 2 - Apply a uniform scaling transformation,
+        // which halves the scale of the square. Apply the
+        // transformation from the bottom-left corner of the square
+
+        transforms.push_back(transformation);
     }
 
-    // TODO(student): Apply a uniform scaling transformation,
-    // which halves the scale of the square. Apply the
-    // transformation from the center of the square
     {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(4, 2);
+        glm::mat3 transformation = transform2D::Translate(7, 6);
 
-        Rasterize(vertices, indices, transformation);
+        // TODO(student): Ex. 2 - Apply a uniform scaling transformation,
+        // which doubles the scale of the square. Apply the
+        // transformation from the bottom-left corner of the square
+
+        transforms.push_back(transformation);
     }
 
-    // TODO(student): Apply a uniform scaling transformation,
-    // which doubles the scale of the square. Apply the
-    // transformation from the center of the square
     {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(7, 2);
+        glm::mat3 transformation = transform2D::Translate(10, 6);
 
-        Rasterize(vertices, indices, transformation);
+        // TODO(student): Ex. 2 - Apply a 45 degree rotation transformation
+        // to the lower-left corner of the square
+
+        transforms.push_back(transformation);
     }
 
-    // TODO(student): Apply a 45 degree rotation transformation
-    // to the center of the square
     {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(10, 2);
+        glm::mat3 transformation = transform2D::Translate(13, 6);
 
-        Rasterize(vertices, indices, transformation);
+        // TODO(student): Ex. 2 - Apply two transformations together, one
+        // of non-uniform scaling with the scaling vector (1, 2)
+        // and a rotation transformation of 45 degrees. Apply both
+        // transformations to the lower left corner of the square.
+
+        transforms.push_back(transformation);
     }
 
-    // TODO(student): Apply two transformations together, one
-    // of non-uniform scaling with the scaling vector (1, 2)
-    // and a rotation transformation of 45 degrees. Apply both
-    // transformations to the center of the square
     {
-        glm::mat3 transformation = glm::mat4(1.0f);
-        transformation *= viewPortTransformation;
-        transformation *= transform2D::Translate(13, 2);
+        glm::mat3 transformation = transform2D::Translate(1, 2);
 
-        Rasterize(vertices, indices, transformation);
+        transforms.push_back(transformation);
+    }
+
+    {
+        glm::mat3 transformation = transform2D::Translate(4, 2);
+
+        // TODO(student): Ex. 3 - Apply a uniform scaling transformation,
+        // which halves the scale of the square. Apply the
+        // transformation from the center of the square
+
+        transforms.push_back(transformation);
+    }
+
+    {
+        glm::mat3 transformation = transform2D::Translate(7, 2);
+
+        // TODO(student): Ex. 3 - Apply a uniform scaling transformation,
+        // which doubles the scale of the square. Apply the
+        // transformation from the center of the square
+
+        transforms.push_back(transformation);
+    }
+
+    {
+        glm::mat3 transformation = transform2D::Translate(10, 2);
+
+        // TODO(student): Ex. 3 - Apply a 45 degree rotation transformation
+        // to the center of the square
+
+        transforms.push_back(transformation);
+    }
+
+    {
+        glm::mat3 transformation = transform2D::Translate(13, 2);
+
+        // TODO(student): Ex. 3 - Apply two transformations together, one
+        // of non-uniform scaling with the scaling vector (1, 2)
+        // and a rotation transformation of 45 degrees. Apply both
+        // transformations to the center of the square
+
+        transforms.push_back(transformation);
     }
 }
 
-void Lab03::Rasterize(
-    const vector<VertexFormat> &vertices,
-    const vector<unsigned int> &indices,
-    const glm::mat3 transformation)
+void Lab03::Draw(float deltaTimeSeconds)
 {
-    for (int i = 0; i < indices.size(); i += 3) {
-        auto v1 = vertices[indices[i]];
-        auto v2 = vertices[indices[i+1]];
-        auto v3 = vertices[indices[i+2]];
-
-        glm::vec3 pos1 = transformation * glm::vec3(v1.position.x, v1.position.y, 1);
-        v1.position = glm::vec3(pos1.x, pos1.y, v1.position.z);
-        
-        glm::vec3 pos2 = transformation * glm::vec3(v2.position.x, v2.position.y, 1);
-        v2.position = glm::vec3(pos2.x, pos2.y, v2.position.z);
-        
-        glm::vec3 pos3 = transformation * glm::vec3(v3.position.x, v3.position.y, 1);
-        v3.position = glm::vec3(pos3.x, pos3.y, v3.position.z);
-
-        TriangleRasterizer::Rasterize(
-            v1, v2, v3, image, depthImage
-        );
+    // Apply the edits the UI made last frame
+    if (star_dirty) {
+        BuildStarTransforms(static_cast<int>(star_rays));
+        star_dirty = false;
     }
+
+    const Shader *shader = GetRasterizer();
+    const std::string mesh = show_star ? "star" : "square";
+    const std::vector<glm::mat3> &meshTransforms = show_star ? star_transforms : transforms;
+
+    for (const Viewport &viewport : viewports) {
+        shader->SetUniform("viewport", viewport.matrix);
+
+        for (const glm::mat3 &transform : meshTransforms) {
+            shader->SetUniform("model", transform);
+            RasterizeMesh(mesh);
+        }
+    }
+}
+
+void Lab03::OnTargetResize()
+{
+    CreateViewports();
 }
 
 void Lab03::OnInputUpdate(float deltaTime, int mods)
 {
-    // Treat continuous update based on input
-
-    bool need_refresh = false;
+    const glm::vec2 before { logic_space.x, logic_space.y };
 
     if (window->KeyHold(GLFW_KEY_UP)) {
         logic_space.y += 9 * deltaTime;
-        need_refresh = true;
     }
 
     if (window->KeyHold(GLFW_KEY_DOWN)) {
         logic_space.y -= 9 * deltaTime;
-        need_refresh = true;
     }
 
     if (window->KeyHold(GLFW_KEY_RIGHT)) {
         logic_space.x += 16 * deltaTime;
-        need_refresh = true;
     }
 
     if (window->KeyHold(GLFW_KEY_LEFT)) {
         logic_space.x -= 16 * deltaTime;
-        need_refresh = true;
     }
 
-    if (need_refresh) {
-        image->Clear(glm::vec3(0));
-        depthImage->Clear();
-
-        DrawShapes();
-
-        image->UpdateInternalData();
-        depthImage->UpdateInternalData();
+    if (before != glm::vec2(logic_space.x, logic_space.y)) {
+        CreateViewports();
     }
 }
