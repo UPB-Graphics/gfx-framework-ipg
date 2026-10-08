@@ -1,5 +1,6 @@
 #include "core/gpu/image.h"
 
+#include <cstdio>
 #include <vector>
 
 using namespace gfxc;
